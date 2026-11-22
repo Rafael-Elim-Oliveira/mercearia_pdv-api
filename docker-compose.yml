@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pdv_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: pdv
+      POSTGRES_PASSWORD: pdv
+      POSTGRES_DB: pdv_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
