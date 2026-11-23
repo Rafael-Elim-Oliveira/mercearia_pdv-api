@@ -22,9 +22,9 @@ export class VendasController {
     return this.vendasService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVendaDto: UpdateVendaDto) {
-    return this.vendasService.update(+id, updateVendaDto);
+  @Patch(':id/cancelar')
+  cancelar(@Param('id') id: string) {
+    return this.vendasService.cancelar(+id);
   }
 
   @Delete(':id')
