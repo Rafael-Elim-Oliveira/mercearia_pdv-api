@@ -5,23 +5,17 @@ import { Cliente } from "src/clientes/entities/cliente.entity";
 @Entity('vendas')
 export class Venda {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @CreateDateColumn()
-    data: Date;
+    data!: Date;
 
     @Column('decimal', { precision: 10, scale: 2 })
-    valorTotal: number;
+    valorTotal!: number;
 
     @Column({ default: 'CONCLUIDA'})
-    status: string;
+    status!: string;
 
-    @ManyToOne(() => Cliente, { eager: true, nullable: true })
-    cliente: Cliente;
-
-    @ManyToOne(() => ItemVenda, (item) => item.venda, {
-        cascade: true,
-        eager: true,
-    })
-    itens: ItemVenda[];
+    @Column({ type: 'numeric', nullable: false })
+    clienteId!: number; 
 }

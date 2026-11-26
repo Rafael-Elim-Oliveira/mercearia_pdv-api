@@ -1,12 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateProdutoDto } from './dto/create-produto.dto';
-import { UpdateProdutoDto } from './dto/update-produto.dto';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Produto } from './entities/produto.entity';
 import { Repository } from 'typeorm';
+import { Produto } from './entities/produto.entity';
+import { ProdutosContract } from './produtos.contract'; 
+import { CreateProdutoDto } from './dto/create-produto.dto';
 
 @Injectable()
-export class ProdutosService {
+export class ProdutosService implements ProdutosContract {
   constructor(
     @InjectRepository(Produto)
     private readonly produtoRepository: Repository<Produto>,
@@ -23,20 +23,28 @@ export class ProdutosService {
 
   async findOne(id: number) {
     const produto = await this.produtoRepository.findOneBy({ id });
-    if (!produto) {
-      throw new NotFoundException(`Produto #${id} não encontrado`);
+    if(!produto) {
+      throw new NotFoundException("Produto não encontrado.");
     }
+
     return produto;
   }
 
-  async update(id: number, updateProdutoDto: UpdateProdutoDto) {
+  async baixarEstoque(id: number, quantidade: number): Promise<void> {
     const produto = await this.findOne(id);
-    this.produtoRepository.merge(produto, updateProdutoDto)
-    return this.produtoRepository.save(produto);
+
+    if (produto.estoque < quantidade) {
+      throw new BadRequestException(`Estoque insuficiente de ${produto.nome}`);
+    }
+
+    produto.estoque -= quantidade;
+    await this.produtoRepository.save(produto);
   }
 
-  async remove(id: number) {
+  async devolverEstoque(id: number, quantidade: number): Promise<void> {
     const produto = await this.findOne(id);
-    return this.produtoRepository.remove(produto);
+
+    produto.estoque += quantidade;
+    await this.produtoRepository.save(produto);
   }
 }

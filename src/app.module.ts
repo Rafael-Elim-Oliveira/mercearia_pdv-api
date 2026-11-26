@@ -21,7 +21,7 @@ import { VendasModule } from './vendas/vendas.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
-
+        synchronize: true,
       }),
     }),
     ProdutosModule,

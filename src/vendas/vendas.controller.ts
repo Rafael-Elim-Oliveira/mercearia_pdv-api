@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { VendasService } from './vendas.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
-import { UpdateVendaDto } from './dto/update-venda.dto';
 
 @Controller('vendas')
 export class VendasController {
@@ -22,13 +21,8 @@ export class VendasController {
     return this.vendasService.findOne(+id);
   }
 
-  @Patch(':id/cancelar')
-  cancelar(@Param('id') id: string) {
-    return this.vendasService.cancelar(+id);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.vendasService.remove(+id);
+  @Patch('/:id/cancelar')
+  cancelar(@Param(':id', ParseIntPipe) id: number) {
+    return this.vendasService.cancelar(id);
   }
 }

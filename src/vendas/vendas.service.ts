@@ -1,87 +1,108 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateVendaDto } from './dto/create-venda.dto';
-import { UpdateVendaDto } from './dto/update-venda.dto';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Venda } from './entities/venda.entity';
 import { Repository } from 'typeorm';
-import { ClientesService } from 'src/clientes/clientes.service';
-import { ProdutosService } from 'src/produtos/produtos.service';
-import { Produto } from 'src/produtos/entities/produto.entity';
+import { Venda } from './entities/venda.entity';
 import { ItemVenda } from './entities/item-venda.entity';
+import { CreateVendaDto } from './dto/create-venda.dto';
+import { PRODUTOS_CONTRACT, type ProdutosContract } from '../produtos/produtos.contract';
+import { CLIENTES_CONTRACT, type ClientesContract } from '../clientes/clientes.contract';
 
 @Injectable()
 export class VendasService {
   constructor(
     @InjectRepository(Venda)
     private readonly vendaRepository: Repository<Venda>,
-    private readonly clientesService: ClientesService,
-    private readonly produtoService: ProdutosService,
+
+    @InjectRepository(ItemVenda)
+    private readonly itemRepository: Repository<ItemVenda>,
+
+    @Inject(PRODUTOS_CONTRACT)
+    private readonly produtos: ProdutosContract,
+
+    @Inject(CLIENTES_CONTRACT)
+    private readonly clientes: ClientesContract,
   ) {}
 
-  async create(createVendaDto: CreateVendaDto) {
-    const venda = new Venda();
-    venda.itens = [];
-    let total = 0;
+  async create(createVendaDto: CreateVendaDto): Promise<Venda> {
 
-    if (createVendaDto.clienteId) {
-      venda.cliente = await this.clientesService.findOne(createVendaDto.clienteId);
+    if(createVendaDto.clienteId) {
+      await this.clientes.findOne(createVendaDto.clienteId);    
     }
 
-    for (const itemDto of createVendaDto.itens) {
-      const produto = await this.produtoService.findOne(itemDto.produtoId);
+    const itensParaSalvar: {
+      produtoId: number;
+      quantidade: number;
+      precoUnitario: number;
+      subtotal: number;
+    }[] = [];
+    let total = 0;
 
-      if (produto.estoque < itemDto.quantidade) {
-        throw new BadRequestException(`Etoque insuficiente de ${produto.nome}`);
-      }
-      
-      await this.produtoService.update(produto.id, {
-        estoque: produto.estoque - itemDto.quantidade,
+    for (const item of createVendaDto.itens){
+      const produto = await this.produtos.findOne(item.produtoId);
+
+      await this.produtos.baixarEstoque(item.produtoId, item.quantidade);
+
+      const preco = Number(produto.preco);
+      const subtotal = preco * item.quantidade;
+
+      total += subtotal;
+
+      itensParaSalvar.push({
+        produtoId: item.produtoId,
+        quantidade: item.quantidade,
+        precoUnitario: preco,
+        subtotal,
       });
+    }
 
-      const itemVenda = new ItemVenda();
-      itemVenda.produto = produto;
-      itemVenda.quantidade = itemDto.quantidade;
-      itemVenda.precoUnitario = Number(produto.preco);
-      itemVenda.subtotal = Number(produto.preco) * itemDto.quantidade;
+    const venda = this.vendaRepository.create({
+      valorTotal: total,
+      clienteId: createVendaDto.clienteId,
+      status: 'CONCLUIDA',
+    });
 
-      total +=itemVenda.subtotal;
-      venda.itens.push(itemVenda);
+    const vendaSalva = await this.vendaRepository.save(venda);
+
+    for (const item of itensParaSalvar) {
+      const itemVenda = this.itemRepository.create({
+        produtoId: item.produtoId,
+        quantidade: item.quantidade,
+        precoUnitario: item.precoUnitario,
+        subtotal: item.subtotal,
+        vendaId: vendaSalva.id,
+      });
+      await this.itemRepository.save(itemVenda);
+    }
+
+    return vendaSalva;
   }
-    venda.valorTotal = total;
-    return this.vendaRepository.save(venda);
-  }
 
-  findAll() {
+  async findAll(): Promise<Venda[]> {
     return this.vendaRepository.find({ order: { id: 'DESC' } });
   }
 
-  async findOne(id: number) {
+  async findOne(id: number): Promise<Venda> {
     const venda = await this.vendaRepository.findOneBy({ id });
-    if(!venda) {
+    if (!venda) {
       throw new NotFoundException(`Venda #${id} não encontrada`);
     }
     return venda;
   }
 
-  async cancelar (id: number) {
+  async cancelar(id: number): Promise<Venda> {
     const venda = await this.findOne(id);
+
     if (venda.status === 'CANCELADA') {
       throw new BadRequestException('Venda já cancelada');
     }
 
-      for (const item of venda.itens) {
-        const produto = await this.produtoService.findOne(item.produto.id);
-        await this.produtoService.update(produto.id, {
-          estoque: produto.estoque + item.quantidade,
-        });
-      }
+    const itens = await this.itemRepository.findBy({ vendaId: id });
 
-      venda.status = 'CANCELADA';
-      return this.vendaRepository.save(venda);
-  }
-
-  async remove(id: number) {
-    const venda = await this.findOne(id);
-    return this.vendaRepository.remove(venda);
+    for (const item of itens){
+      await this.produtos.devolverEstoque(item.produtoId, item.quantidade)
+    }
+    
+    venda.status = 'CANCELADA'
+    return this.vendaRepository.save(venda)
   }
 }
