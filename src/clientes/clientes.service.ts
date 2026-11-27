@@ -23,7 +23,7 @@ export class ClientesService {
   async findOne(id: number) {
     const cliente = await this.clienteRepository.findOneBy({ id });
     if (!cliente) {
-      throw new NotFoundException('Cliente #${id} não encontrado');
+      throw new NotFoundException(`Cliente #${id} não encontrado`);
     }
     return cliente;
   }

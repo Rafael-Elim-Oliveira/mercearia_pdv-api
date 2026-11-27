@@ -16,6 +16,6 @@ export class Venda {
     @Column({ default: 'CONCLUIDA'})
     status!: string;
 
-    @Column({ type: 'numeric', nullable: false })
-    clienteId!: number; 
+    @Column({ type: 'int', nullable: true })
+    clienteId!: number | null; 
 }

@@ -22,7 +22,7 @@ export class VendasController {
   }
 
   @Patch('/:id/cancelar')
-  cancelar(@Param(':id', ParseIntPipe) id: number) {
+  cancelar(@Param('id', ParseIntPipe) id: number) {
     return this.vendasService.cancelar(id);
   }
 }
