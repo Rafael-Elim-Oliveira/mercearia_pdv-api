@@ -1,6 +1,6 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ItemVenda } from "./item-venda.entity";
-import { Cliente } from "src/clientes/entities/cliente.entity";
+import { Cliente } from "../../clientes/entities/cliente.entity";
 
 @Entity('vendas')
 export class Venda {
@@ -19,7 +19,7 @@ export class Venda {
     @ManyToOne(() => Cliente, { eager: true, nullable: true })
     cliente: Cliente;
 
-    @ManyToOne(() => ItemVenda, (item) => item.venda, {
+    @OneToMany(() => ItemVenda, (item) => item.venda, {
         cascade: true,
         eager: true,
     })

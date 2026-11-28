@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity('cliente')
+@Entity('clientes')
 export class Cliente {
     @PrimaryGeneratedColumn()
     id: number;
@@ -12,5 +12,5 @@ export class Cliente {
     cpf: string;
 
     @Column({ nullable: true })
-    telefone: string;
+    telefone?: string;
 }
